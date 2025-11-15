@@ -50,6 +50,10 @@ namespace PinJuke.Model
 
     public record State(StateType Type, object? Data = null);
 
+    public class MediaEventData
+    {
+    }
+
     public class MainModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -61,9 +65,11 @@ namespace PinJuke.Model
         public event EventHandler<PresetActionEventArgs>? PresetEvent;
         public event EventHandler<PlayMediaEventArgs>? PlayMediaEvent;
         public event EventHandler<EndMediaEventArgs>? EndMediaEvent;
+        public event EventHandler<MediaEventArgs<MediaEventData>>? MediaEvent;
 
         private PlayMediaEventArgs? playMediaEventArgs = null;
         private EndMediaEventArgs? endMediaEventArgs = null;
+        private MediaEventArgs<MediaEventData>? mediaEventArgs = null;
 
         public Configuration.Configuration Configuration { get; }
         public Configuration.UserConfiguration UserConfiguration { get; }
@@ -281,6 +287,7 @@ namespace PinJuke.Model
         }
 
         private int presetInfoLastHideQueuedAt;
+        private int presetChangedByMediaAt;
 
         private State lastState = new State(StateType.Stop);
         /// <summary>
@@ -475,6 +482,17 @@ namespace PinJuke.Model
         {
             PresetEvent?.Invoke(this, new(PresetAction.Next));
             ShowPresetInfo();
+        }
+
+        private void TriggerNextPresetByMedia()
+        {
+            var now = presetInfoLastHideQueuedAt = Environment.TickCount;
+            if (now - presetChangedByMediaAt < 5000)
+            {
+                return;
+            }
+            presetChangedByMediaAt = now;
+            PresetEvent?.Invoke(this, new(PresetAction.Next));
         }
 
         private UserPlaylist GetUserPlaylist()
@@ -720,7 +738,7 @@ namespace PinJuke.Model
         {
             endMediaEventArgs = null;
 
-            MediaPlaying = false;
+            UpdateMediaPlaying(false);
             if (type == PlayFileType.Play)
             {
                 MediaPlayingFile = null;
@@ -741,8 +759,23 @@ namespace PinJuke.Model
         {
             playMediaEventArgs = null;
 
-            MediaPlayingFile = PlayingFile;
-            MediaPlaying = Playing;
+            UpdateMediaPlaying(Playing);
+        }
+
+        private void UpdateMediaPlaying(bool mediaPlaying)
+        {
+            if (mediaPlaying)
+            {
+                MediaPlayingFile = PlayingFile;
+                MediaPlaying = true;
+
+                TriggerNextPresetByMedia();
+            }
+            else
+            {
+                MediaPlaying = false;
+                MediaPlayingFile = PlayingFile;
+            }
         }
 
         public void PlayNext(TriggerType triggerType)
