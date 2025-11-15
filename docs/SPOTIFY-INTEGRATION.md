@@ -31,6 +31,7 @@ PinJuke now features full Spotify Web API integration, allowing you to stream mu
 ### Spotify Requirements
 - **Spotify Premium Account** (required for Web API playback control)
 - **Spotify Application Registration** (for API access)
+- **Spotify Desktop Application** (Installed on your machine and configured to start with windows)
 
 ### System Requirements
 - Internet connection for Spotify API communication
